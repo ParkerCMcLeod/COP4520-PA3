@@ -4,3 +4,8 @@ Programming Assignment Problem 2
 Instructor: Juan Parra
 Due date: Thursday, April 13th by 11:59 PM
 */
+
+int main(void) {
+    
+    return 0;
+}
