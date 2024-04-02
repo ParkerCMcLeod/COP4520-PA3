@@ -15,6 +15,9 @@ Due date: Thursday, April 13th by 11:59 PM
 #include <ctime> 
 
 #define N 500'000
+#define MOD_PRINT 10'000
+
+std::mutex console_mutex; // Global mutex for cout control (just for pretty)
 
 struct Present {
     unsigned int tag;
@@ -75,16 +78,20 @@ void processPresents(PresentLLChain& chain, std::vector<Present*>& unorderedBag,
     for (unsigned int i = thread_id; i < N; i += 4) { // Each thread processes a fourth of the presents (proud of this one)
         chain.addPresent(unorderedBag[i]); // Add a present
         unsigned int tag = unorderedBag[i]->tag;
-        if (tag % 10'000 == 0) {
+        if (tag % MOD_PRINT == 0) {
+            std::unique_lock<std::mutex> consoleLock(console_mutex);
             if (chain.search(tag)) {
                 std::cout << "Thread " << thread_id << ": Present with tag " << tag << " is in the list.\n";
             } else {
                 std::cout << "Thread " << thread_id << ": Present with tag " << tag << " is NOT in the list.\n";
             }
+            consoleLock.unlock();
         }
         auto removedPresent = chain.removePresent(); // Remove a present
-        if (removedPresent && tag % 10'000 == 0) { // Check if removedPresent is not nullptr and a meets conditions
+        if (removedPresent && tag % MOD_PRINT == 0) { // Check if removedPresent is not nullptr and a meets conditions
+            std::unique_lock<std::mutex> consoleLock(console_mutex);
             std::cout << "Thread " << thread_id << ": Wrote a THANK YOU for present " << tag << "!\n";
+            consoleLock.unlock();
         }
     }
 }
