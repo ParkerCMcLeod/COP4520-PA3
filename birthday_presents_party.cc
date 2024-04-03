@@ -15,7 +15,7 @@ Due date: Thursday, April 13th by 11:59 PM
 #include <ctime> 
 
 #define N 500'000
-#define MOD_PRINT 10'000
+#define MOD_PRINT 100'000
 
 std::mutex console_mutex; // Global mutex for cout control (just for pretty)
 
