@@ -2,7 +2,7 @@
 CXX=g++
 
 # Compiler flags
-CXXFLAGS=-Wall -g -pthread -std=c++2a
+CXXFLAGS=-Wall -g -pthread -std=c++14
 
 # Decide which program to build based on the argument
 ifeq ($(PROBLEM),1)

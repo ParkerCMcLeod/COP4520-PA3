@@ -28,11 +28,17 @@ constexpr int MILLISECONDS_PER_SIMULATED_HOUR = 1000 * 60 * 60 / SIMULATION_SPEE
 // Global storage for temperature readings
 std::vector<std::vector<int>> hourlyTemperatures(SIMULATION_HOURS, std::vector<int>(READINGS_PER_HOUR * NUM_SENSORS));
 std::mutex tempMutex; // Mutex for temperature data access synchronization
+std::mutex consoleLock; // Added mutex for console output synchronization
 std::condition_variable cv; // Condition variable for timing synchronization
 std::atomic<int> simulationClock(0); // Atomic simulation clock
 
 // Thread function for sensor simulation
 void sensorThread(int sensorID) {
+    {
+        std::lock_guard<std::mutex> console(consoleLock);
+        std::cout << "Sensor thread " << sensorID << " starting.\n";
+    }
+
     std::random_device rd;
     auto seed = rd() ^ (
         std::hash<std::thread::id>()(std::this_thread::get_id()) +
@@ -48,7 +54,7 @@ void sensorThread(int sensorID) {
 
             // Wait for the next minute in the simulation time
             cv.wait(lk, [&] { return simulationClock.load(std::memory_order_acquire) >= lastClockCheck + 1; });
-            lastClockCheck += 1;
+            lastClockCheck = simulationClock.load(std::memory_order_acquire); // Ensures synchronization with current simulation time
             lk.unlock();
 
             int temp = distr(gen); // Generate random temperature
@@ -59,10 +65,20 @@ void sensorThread(int sensorID) {
             }
         }
     }
+
+    {
+        std::lock_guard<std::mutex> console(consoleLock);
+        std::cout << "Sensor thread " << sensorID << " stopping.\n";
+    }
 }
 
 // Thread function for generating hourly reports
 void reportThread() {
+    {
+        std::lock_guard<std::mutex> console(consoleLock);
+        std::cout << "Report thread starting.\n";
+    }
+
     int lastClockCheck = 0;
     for (int hour = 0; hour < SIMULATION_HOURS; ++hour) {
         std::unique_lock<std::mutex> lk(tempMutex);
@@ -90,12 +106,20 @@ void reportThread() {
         }
 
         // Print the hourly report
-        std::cout << "Hour " << hour + 1 << " Report:";
-        std::cout << "\n\tHighest temperatures: ";
-        for (int temp : highest) std::cout << temp << " ";
-        std::cout << "\n\tLowest temperatures: ";
-        for (int temp : lowest) std::cout << temp << " ";
-        std::cout << "\n\t10-minute interval with largest difference starts at minute: " << intervalStart / NUM_SENSORS << std::endl << std::endl;
+        {
+            std::lock_guard<std::mutex> console(consoleLock);
+            std::cout << "Hour " << hour + 1 << " Report:";
+            std::cout << "\n\tHighest temperatures: ";
+            for (int temp : highest) std::cout << temp << " ";
+            std::cout << "\n\tLowest temperatures: ";
+            for (int temp : lowest) std::cout << temp << " ";
+            std::cout << "\n\t10-minute interval with largest difference starts at minute: " << intervalStart / NUM_SENSORS << std::endl << std::endl;
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> console(consoleLock);
+        std::cout << "Report thread stopping.\n";
     }
 }
 
@@ -126,4 +150,5 @@ int main(void) {
     reporter.join();
 
     return 0;
+    std::cout << std::endl;
 }

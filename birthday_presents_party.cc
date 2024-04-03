@@ -75,25 +75,41 @@ public:
 };
 
 void processPresents(PresentLLChain& chain, std::vector<Present*>& unorderedBag, int thread_id) {
+    std::unique_lock<std::mutex> consoleLock(console_mutex);    
+    std::cout << "Servant " << thread_id << " has started working. " << std::endl;
+    consoleLock.unlock();
+
     for (unsigned int i = thread_id; i < N; i += 4) { // Each thread processes a fourth of the presents (proud of this one)
         chain.addPresent(unorderedBag[i]); // Add a present
         unsigned int tag = unorderedBag[i]->tag;
         if (tag % MOD_PRINT == 0) {
-            std::unique_lock<std::mutex> consoleLock(console_mutex);
             if (chain.search(tag)) {
-                std::cout << "Thread " << thread_id << ": Present with tag " << tag << " is in the list.\n";
+                std::unique_lock<std::mutex> consoleLock(console_mutex);
+                std::cout << "Servant " << thread_id << ": Present with tag " << tag << " is in the list.\n";
+                consoleLock.unlock();
             } else {
-                std::cout << "Thread " << thread_id << ": Present with tag " << tag << " is NOT in the list.\n";
+                std::unique_lock<std::mutex> consoleLock(console_mutex);
+                std::cout << "Servant " << thread_id << ": Present with tag " << tag << " is NOT in the list.\n";
+                consoleLock.unlock();
             }
-            consoleLock.unlock();
+            if (chain.search(tag + 10)) {
+                std::unique_lock<std::mutex> consoleLock(console_mutex);
+                std::cout << "Servant " << thread_id << ": Present with tag " << tag + 10 << " is in the list.\n";
+                consoleLock.unlock();
+            } else {
+                std::unique_lock<std::mutex> consoleLock(console_mutex);
+                std::cout << "Servant " << thread_id << ": Present with tag " << tag + 10 << " is NOT in the list.\n";
+                consoleLock.unlock();
+            }
         }
         auto removedPresent = chain.removePresent(); // Remove a present
         if (removedPresent && tag % MOD_PRINT == 0) { // Check if removedPresent is not nullptr and a meets conditions
             std::unique_lock<std::mutex> consoleLock(console_mutex);
-            std::cout << "Thread " << thread_id << ": Wrote a THANK YOU for present " << tag << "!\n";
+            std::cout << "Servant " << thread_id << ": Wrote a THANK YOU for present " << tag << "!\n";
             consoleLock.unlock();
         }
     }
+    std::cout << "Servant " << thread_id << " has completed working. " << std::endl;
 }
 
 int main(void) {
@@ -120,10 +136,12 @@ int main(void) {
     std::mt19937 g(seed);
     std::shuffle(unorderedBag.begin(), unorderedBag.end(), g);
 
-    // // Display the first 10 presents pulled out of the bag
-    // for (int i = 0; i < 10; ++i) {
-    //     std::cout << unorderedBag[i]->tag << std::endl;
-    // }
+    // Display the first 10 presents pulled out of the bag
+    std::cout << "The first ten presents pullout out of the bag are ";
+    for (int i = 0; i < 10; ++i) {
+        std::cout << unorderedBag[i]->tag << " ";
+    }
+    std::cout << std::endl;
 
     /**************************** CHAIN MANAGEMENT BY SERVANTS ****************************/
     PresentLLChain chain;
